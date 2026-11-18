@@ -1,0 +1,48 @@
+{
+  "arm": "container",
+  "protocol": {
+    "explicitly_not_evidence": [
+      "container starts slower or faster",
+      "the same final query returns the same rows in both environments",
+      "a modified binary or image was used to make the two match"
+    ],
+    "purpose": "separate product acknowledgement semantics from container storage behaviour; do not assume equivalence",
+    "shared_code": "../harness/experiments.py (same scenarios, same classes)",
+    "steps": [
+      {
+        "action": "docker info; record storage driver, cgroup version, server version",
+        "id": "C1_runtime_probe",
+        "overturns_native_if": "no runtime is available (then the container column stays unmeasured)"
+      },
+      {
+        "action": "run `stat -f -c %T /data` inside the container and record the driver behind the volume",
+        "id": "C2_fs_probe",
+        "overturns_native_if": "the volume is not a local fsync-capable filesystem; fsync may be a no-op or a network round trip, which changes the latency distribution but not the acknowledgement contract"
+      },
+      {
+        "action": "run S0, S1, S2, S3, S4, S5, S6, S7 from experiments.py against the container endpoint",
+        "id": "C3_ack_matrix",
+        "overturns_native_if": "any scenario reports a different observation class for the same injected fault (for example a 503 that becomes 200, or a no_response that becomes 2xx)"
+      },
+      {
+        "action": "commit, `docker rm -f`, re-run on the same named volume, compare rows and /changes",
+        "id": "C4_volume_survival",
+        "overturns_native_if": "a committed record is missing after container replacement while the volume was preserved (this is a volume problem, not a container-vs-native difference, and must be reported as such)"
+      },
+      {
+        "action": "measure cold start to /health for native and container on the same image and data size",
+        "id": "C5_restart_cost",
+        "overturns_native_if": "never on its own; start time is recorded but is not evidence of durability"
+      }
+    ]
+  },
+  "reason": "no container runtime is present in this build environment; the container column is unmeasured, not equal to native",
+  "runtime_probe": {
+    "docker": null,
+    "docker_sock": false,
+    "nerdctl": null,
+    "podman": null
+  },
+  "status": "not_executed",
+  "timestamp_utc": "2026-11-18T08:28:23Z"
+}
